@@ -134,6 +134,89 @@ router.post("/", async (req, res) => {
   }
 });
 
+router.put("/:id", async (req, res) => {
+  const { id } = req.params;
+
+  const {
+    object_name,
+    object_type,
+    date_observed,
+    location,
+    equipment,
+    sky_conditions,
+    notes,
+    rating,
+  } = req.body;
+
+  // Validate ID
+  if (!/^\d+$/.test(id)) {
+    return res.status(400).json({
+      error: "Invalid observation ID.",
+    });
+  }
+
+  // Validate required fields
+  if (!object_name || !object_type || !date_observed) {
+    return res.status(400).json({
+      error: "Object name, object type, and observation date are required.",
+    });
+  }
+
+  // Validate rating
+  if (
+    rating !== null &&
+    rating !== undefined &&
+    (Number(rating) < 1 || Number(rating) > 5)
+  ) {
+    return res.status(400).json({
+      error: "Rating must be between 1 and 5.",
+    });
+  }
+
+  try {
+    const result = await pool.query(
+      `
+      UPDATE observations
+      SET
+        object_name = $1,
+        object_type = $2,
+        date_observed = $3,
+        location = $4,
+        equipment = $5,
+        sky_conditions = $6,
+        notes = $7,
+        rating = $8
+      WHERE id = $9
+      RETURNING *
+      `,
+      [
+        object_name,
+        object_type,
+        date_observed,
+        location || null,
+        equipment || null,
+        sky_conditions || null,
+        notes || null,
+        rating || null,
+        id,
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Observation not found.",
+      });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error updating observation:", error);
+
+    res.status(500).json({
+      error: "Failed to update observation.",
+    });
+  }
+});
 // DELETE /api/observations/:id
 // Delete an observation.
 router.delete("/:id", async (req, res) => {
