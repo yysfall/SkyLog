@@ -1,46 +1,64 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { getObservations } from "../services/observations";
-import ObservationCard from "../components/ObservationCard";
+import {
+  getObservations,
+} from "../services/observations";
 
 function Dashboard() {
   const [observations, setObservations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
-    async function loadObservations() {
+    async function loadData() {
       try {
         const data = await getObservations();
         setObservations(data);
-      } catch (err) {
-        setError(err.message);
+      } catch (error) {
+        console.error(error);
       } finally {
         setLoading(false);
       }
     }
 
-    loadObservations();
+    loadData();
   }, []);
 
   const recentObservations = observations.slice(0, 3);
 
+  const totalObservations = observations.length;
+
+  const ratedObservations = observations.filter(
+    (observation) => observation.rating
+  );
+
+  const averageRating =
+    ratedObservations.length > 0
+      ? (
+          ratedObservations.reduce(
+            (sum, observation) =>
+              sum + Number(observation.rating),
+            0
+          ) / ratedObservations.length
+        ).toFixed(1)
+      : "—";
+
   return (
-    <main className="page-container">
+    <main className="page">
       <section className="hero">
-        <div>
-          <p className="eyebrow">YOUR PERSONAL SKY JOURNAL</p>
-          <h1>Explore the night. Remember what you see.</h1>
-          <p className="hero-description">
-            Keep track of the celestial objects you've observed
-            and your experiences under the night sky.
-          </p>
-        </div>
+        <p className="eyebrow">SKYLOG</p>
+
+        <h1>Explore the night sky.</h1>
+
+        <p>
+          Keep track of your observations, record what you
+          discover, and revisit your favorite moments under
+          the stars.
+        </p>
 
         <Link
           to="/observations"
-          className="button primary-button"
+          className="btn btn-primary"
         >
           View Observations
         </Link>
@@ -48,46 +66,70 @@ function Dashboard() {
 
       <section className="stats-grid">
         <div className="stat-card">
-          <p>Total Observations</p>
-          <h2>{observations.length}</h2>
+          <span>Total Observations</span>
+          <strong>{totalObservations}</strong>
+        </div>
+
+        <div className="stat-card">
+          <span>Average Rating</span>
+          <strong>
+            {averageRating}
+            {averageRating !== "—" && " / 5"}
+          </strong>
         </div>
       </section>
 
-      <section className="section">
+      <section className="dashboard-section">
         <div className="section-heading">
-          <h2>Recent Observations</h2>
+          <div>
+            <h2>Recent Observations</h2>
+            <p>Your latest skywatching entries.</p>
+          </div>
 
           <Link to="/observations">
             View All
           </Link>
         </div>
 
-        {loading && <p>Loading observations...</p>}
-
-        {error && <p className="error-message">{error}</p>}
-
-        {!loading && !error && observations.length === 0 && (
+        {loading ? (
+          <p className="loading">Loading observations...</p>
+        ) : recentObservations.length === 0 ? (
           <div className="empty-state">
-            <h3>Your skywatching journey starts here.</h3>
-            <p>You haven't recorded any observations yet.</p>
+            <h2>No observations yet</h2>
+
+            <p>
+              Start recording your skywatching experiences.
+            </p>
 
             <Link
               to="/observations"
-              className="button primary-button"
+              className="btn btn-primary"
             >
-              Record Your First Observation
+              Add Observation
             </Link>
           </div>
-        )}
-
-        {!loading && !error && (
-          <div className="observation-grid">
+        ) : (
+          <div className="observation-list">
             {recentObservations.map((observation) => (
-              <ObservationCard
+              <Link
                 key={observation.id}
-                observation={observation}
-                onDelete={() => {}}
-              />
+                to={`/observations/${observation.id}`}
+                className="dashboard-observation"
+              >
+                <div>
+                  <strong>{observation.object_name}</strong>
+
+                  <span>
+                    {observation.object_type}
+                  </span>
+                </div>
+
+                <span>
+                  {observation.rating
+                    ? `${observation.rating} / 5`
+                    : "Not rated"}
+                </span>
+              </Link>
             ))}
           </div>
         )}
