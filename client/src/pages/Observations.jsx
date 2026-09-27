@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import ObservationCard from "../components/ObservationCard";
 import ObservationForm from "../components/ObservationForm";
 
 import {
-  getObservations,
   createObservation,
   deleteObservation,
+  getObservations,
 } from "../services/observations";
 
 function Observations() {
@@ -17,11 +18,13 @@ function Observations() {
 
   async function loadObservations() {
     try {
+      setLoading(true);
       setError("");
+
       const data = await getObservations();
       setObservations(data);
-    } catch (err) {
-      setError(err.message);
+    } catch (error) {
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -31,11 +34,19 @@ function Observations() {
     loadObservations();
   }, []);
 
-  async function handleCreate(observation) {
-    await createObservation(observation);
+  async function handleCreate(data) {
+    try {
+      const newObservation = await createObservation(data);
 
-    await loadObservations();
-    setShowForm(false);
+      setObservations((current) => [
+        newObservation,
+        ...current,
+      ]);
+
+      setShowForm(false);
+    } catch (error) {
+      throw error;
+    }
   }
 
   async function handleDelete(id) {
@@ -43,60 +54,73 @@ function Observations() {
       "Are you sure you want to delete this observation?"
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     try {
-      setError("");
-
       await deleteObservation(id);
 
-      setObservations((previous) =>
-        previous.filter((observation) => observation.id !== id)
+      setObservations((current) =>
+        current.filter((observation) => observation.id !== id)
       );
-    } catch (err) {
-      setError(err.message);
+    } catch (error) {
+      setError(error.message);
     }
   }
 
   return (
-    <main className="page-container">
-      <div className="section-heading">
+    <main className="page">
+      <div className="page-header">
         <div>
-          <p className="eyebrow">YOUR JOURNAL</p>
-          <h1>My Observations</h1>
-          <p>Browse and manage your skywatching records.</p>
+          <h1>Observations</h1>
+          <p>Keep track of the objects you have observed.</p>
         </div>
 
         <button
-          className="button primary-button"
-          onClick={() => setShowForm((previous) => !previous)}
+          className="btn btn-primary"
+          onClick={() => setShowForm((current) => !current)}
         >
           {showForm ? "Close Form" : "+ Add Observation"}
         </button>
       </div>
 
       {showForm && (
-        <section className="form-panel">
-          <h2>Record an Observation</h2>
+        <section className="surface">
+          <h2>New Observation</h2>
 
-          <ObservationForm onSubmit={handleCreate} />
+          <ObservationForm
+            onSubmit={handleCreate}
+            submitLabel="Save Observation"
+          />
         </section>
       )}
 
-      {error && <p className="error-message">{error}</p>}
+      {error && (
+        <div className="error-message" role="alert">
+          {error}
+        </div>
+      )}
 
       {loading ? (
-        <p>Loading observations...</p>
+        <p className="loading">Loading observations...</p>
       ) : observations.length === 0 ? (
-        <div className="empty-state">
+        <section className="empty-state">
           <h2>No observations yet</h2>
+
           <p>
-            Add your first celestial observation to begin
-            building your skywatching journal.
+            Add your first skywatching observation to get started.
           </p>
-        </div>
+
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowForm(true)}
+          >
+            Add Observation
+          </button>
+        </section>
       ) : (
-        <div className="observation-grid">
+        <section className="observation-list">
           {observations.map((observation) => (
             <ObservationCard
               key={observation.id}
@@ -104,7 +128,7 @@ function Observations() {
               onDelete={handleDelete}
             />
           ))}
-        </div>
+        </section>
       )}
     </main>
   );

@@ -1,48 +1,46 @@
 import { Link } from "react-router-dom";
 
 function ObservationCard({ observation, onDelete }) {
-  const date = new Date(observation.date_observed);
-
   return (
     <article className="observation-card">
-      <div className="card-heading">
+      <div className="observation-card-content">
         <div>
-          <h3>{observation.object_name}</h3>
-          <span className="badge">{observation.object_type}</span>
+          <span className="observation-type">
+            {observation.object_type}
+          </span>
+
+          <h2>{observation.object_name}</h2>
+
+          <p>
+            {new Date(
+              observation.date_observed
+            ).toLocaleString()}
+          </p>
+        </div>
+
+        <div className="observation-rating">
+          {observation.rating
+            ? `${observation.rating} / 5`
+            : "Not rated"}
         </div>
       </div>
-
-      <p>
-        <strong>Observed:</strong>{" "}
-        {date.toLocaleString()}
-      </p>
-
-      {observation.location && (
-        <p>
-          <strong>Location:</strong> {observation.location}
-        </p>
-      )}
-
-      {observation.equipment && (
-        <p>
-          <strong>Equipment:</strong> {observation.equipment}
-        </p>
-      )}
 
       <div className="card-actions">
         <Link
           to={`/observations/${observation.id}`}
-          className="button secondary-button"
+          className="btn btn-secondary"
         >
           View Details
         </Link>
 
-        <button
-          className="button danger-button"
-          onClick={() => onDelete(observation.id)}
-        >
-          Delete
-        </button>
+        {onDelete && (
+          <button
+            className="btn btn-danger"
+            onClick={() => onDelete(observation.id)}
+          >
+            Delete
+          </button>
+        )}
       </div>
     </article>
   );
