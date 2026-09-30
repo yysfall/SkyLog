@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 
 import ObservationCard from "../components/ObservationCard";
 import ObservationForm from "../components/ObservationForm";
 
 import {
+  getObservations,
   createObservation,
   deleteObservation,
-  getObservations,
 } from "../services/observations";
 
 function Observations() {
@@ -18,13 +17,13 @@ function Observations() {
 
   async function loadObservations() {
     try {
-      setLoading(true);
       setError("");
 
       const data = await getObservations();
+
       setObservations(data);
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -34,24 +33,17 @@ function Observations() {
     loadObservations();
   }, []);
 
-  async function handleCreate(data) {
-    try {
-      const newObservation = await createObservation(data);
+  async function handleCreate(observation) {
+    await createObservation(observation);
 
-      setObservations((current) => [
-        newObservation,
-        ...current,
-      ]);
+    await loadObservations();
 
-      setShowForm(false);
-    } catch (error) {
-      throw error;
-    }
+    setShowForm(false);
   }
 
   async function handleDelete(id) {
     const confirmed = window.confirm(
-      "Are you sure you want to delete this observation?"
+      "Delete this observation permanently?"
     );
 
     if (!confirmed) {
@@ -59,75 +51,112 @@ function Observations() {
     }
 
     try {
+      setError("");
+
       await deleteObservation(id);
 
-      setObservations((current) =>
-        current.filter((observation) => observation.id !== id)
+      setObservations((previous) =>
+        previous.filter(
+          (observation) => observation.id !== id
+        )
       );
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      setError(err.message);
     }
   }
 
   return (
-    <main className="page">
-      <div className="page-header">
+    <main className="page-container">
+      <div className="section-heading">
         <div>
-          <h1>Observations</h1>
-          <p>Keep track of the objects you have observed.</p>
+          <p className="eyebrow">Observation log</p>
+
+          <h1>What have you seen?</h1>
+
+          <p>
+            Every entry is a small record of a night under
+            the sky.
+          </p>
         </div>
 
         <button
-          className="btn btn-primary"
-          onClick={() => setShowForm((current) => !current)}
+          type="button"
+          className="button primary-button"
+          onClick={() =>
+            setShowForm((previous) => !previous)
+          }
         >
-          {showForm ? "Close Form" : "+ Add Observation"}
+          {showForm ? "Close form" : "+ New observation"}
         </button>
       </div>
 
       {showForm && (
-        <section className="surface">
-          <h2>New Observation</h2>
+        <section className="form-panel">
+          <p className="eyebrow">New entry</p>
 
-          <ObservationForm
-            onSubmit={handleCreate}
-            submitLabel="Save Observation"
-          />
+          <h2>Record an observation</h2>
+
+          <ObservationForm onSubmit={handleCreate} />
         </section>
       )}
 
       {error && (
-        <div className="error-message" role="alert">
+        <p className="error-message">
           {error}
+        </p>
+      )}
+
+      {loading && (
+        <div className="empty-state">
+          <p>Loading your observation log...</p>
         </div>
       )}
 
-      {loading ? (
-        <p className="loading">Loading observations...</p>
-      ) : observations.length === 0 ? (
-        <section className="empty-state">
-          <h2>No observations yet</h2>
+      {!loading && observations.length === 0 && (
+        <div className="empty-state">
+          <p className="eyebrow">Empty log</p>
+
+          <h2>No observations yet.</h2>
 
           <p>
-            Add your first skywatching observation to get started.
+            Your first observation will appear here once
+            you record it.
           </p>
 
           <button
-            className="btn btn-primary"
+            type="button"
+            className="button primary-button"
             onClick={() => setShowForm(true)}
           >
-            Add Observation
+            Record an observation
           </button>
-        </section>
-      ) : (
-        <section className="observation-list">
-          {observations.map((observation) => (
-            <ObservationCard
-              key={observation.id}
-              observation={observation}
-              onDelete={handleDelete}
-            />
-          ))}
+        </div>
+      )}
+
+      {!loading && observations.length > 0 && (
+        <section>
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Archive</p>
+
+              <h2>
+                {observations.length}{" "}
+                {observations.length === 1
+                  ? "observation"
+                  : "observations"}
+              </h2>
+            </div>
+          </div>
+
+          <div className="observation-grid">
+            {observations.map((observation) => (
+              <ObservationCard
+                key={observation.id}
+                observation={observation}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
         </section>
       )}
     </main>

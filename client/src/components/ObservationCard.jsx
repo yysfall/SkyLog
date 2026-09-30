@@ -1,41 +1,54 @@
 import { Link } from "react-router-dom";
 
 function ObservationCard({ observation, onDelete }) {
+  const date = new Date(observation.date_observed);
+
+  const formattedDate = date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  const formattedTime = date.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
   return (
     <article className="observation-card">
-      <div className="observation-card-content">
-        <div>
-          <span className="observation-type">
-            {observation.object_type}
-          </span>
+      <div className="card-heading">
+        <span className="badge">
+          {observation.object_type}
+        </span>
 
-          <h2>{observation.object_name}</h2>
+        <h3>{observation.object_name}</h3>
 
-          <p>
-            {new Date(
-              observation.date_observed
-            ).toLocaleString()}
-          </p>
-        </div>
+        <div className="observation-meta">
+          <span>{formattedDate}</span>
+          <span>{formattedTime}</span>
 
-        <div className="observation-rating">
-          {observation.rating
-            ? `${observation.rating} / 5`
-            : "Not rated"}
+          {observation.location && (
+            <span>{observation.location}</span>
+          )}
+
+          {observation.sky_conditions && (
+            <span>{observation.sky_conditions}</span>
+          )}
         </div>
       </div>
 
       <div className="card-actions">
         <Link
           to={`/observations/${observation.id}`}
-          className="btn btn-secondary"
+          className="button secondary-button"
         >
-          View Details
+          Open log
         </Link>
 
         {onDelete && (
           <button
-            className="btn btn-danger"
+            type="button"
+            className="button danger-button"
             onClick={() => onDelete(observation.id)}
           >
             Delete

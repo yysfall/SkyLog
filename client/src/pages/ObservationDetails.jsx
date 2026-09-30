@@ -1,32 +1,26 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
-import ObservationForm from "../components/ObservationForm";
 import {
-  deleteObservation,
   getObservationById,
-  updateObservation,
+  deleteObservation,
 } from "../services/observations";
 
 function ObservationDetails() {
   const { id } = useParams();
-  const navigate = useNavigate();
 
   const [observation, setObservation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     async function loadObservation() {
       try {
-        setLoading(true);
-        setError("");
-
         const data = await getObservationById(id);
+
         setObservation(data);
-      } catch (error) {
-        setError(error.message);
+      } catch (err) {
+        setError(err.message);
       } finally {
         setLoading(false);
       }
@@ -35,16 +29,9 @@ function ObservationDetails() {
     loadObservation();
   }, [id]);
 
-  async function handleUpdate(updatedData) {
-    const updatedObservation = await updateObservation(id, updatedData);
-
-    setObservation(updatedObservation);
-    setIsEditing(false);
-  }
-
   async function handleDelete() {
     const confirmed = window.confirm(
-      "Are you sure you want to delete this observation?"
+      "Delete this observation permanently?"
     );
 
     if (!confirmed) {
@@ -53,139 +40,169 @@ function ObservationDetails() {
 
     try {
       await deleteObservation(id);
-      navigate("/observations");
-    } catch (error) {
-      setError(error.message);
+
+      window.location.href = "/observations";
+    } catch (err) {
+      setError(err.message);
     }
   }
 
   if (loading) {
     return (
-      <main className="page">
-        <p className="loading">Loading observation...</p>
+      <main className="page-container">
+        <div className="empty-state">
+          <p>Opening observation log...</p>
+        </div>
       </main>
     );
   }
 
   if (error) {
     return (
-      <main className="page">
-        <div className="error-message">
-          {error}
-        </div>
+      <main className="page-container">
+        <p className="error-message">{error}</p>
 
-        <Link to="/observations" className="btn btn-secondary">
-          Back to Observations
+        <Link
+          to="/observations"
+          className="back-link"
+        >
+          ← Back to observations
         </Link>
       </main>
     );
   }
 
   if (!observation) {
-    return null;
-  }
-
-  if (isEditing) {
     return (
-      <main className="page">
-        <div className="page-header">
-          <div>
-            <Link to={`/observations/${id}`} className="back-link">
-              ← Cancel
-            </Link>
+      <main className="page-container">
+        <div className="empty-state">
+          <h2>Observation not found.</h2>
 
-            <h1>Edit Observation</h1>
-            <p>Update the details of your observation.</p>
-          </div>
+          <Link
+            to="/observations"
+            className="button secondary-button"
+          >
+            Back to observations
+          </Link>
         </div>
-
-        <section className="surface">
-          <ObservationForm
-            initialData={observation}
-            onSubmit={handleUpdate}
-            submitLabel="Update Observation"
-          />
-        </section>
       </main>
     );
   }
 
+  const date = new Date(observation.date_observed);
+
+  const formattedDate = date.toLocaleDateString(
+    undefined,
+    {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }
+  );
+
+  const formattedTime = date.toLocaleTimeString(
+    undefined,
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  );
+
   return (
-    <main className="page">
-      <div className="page-header">
-        <div>
-          <Link to="/observations" className="back-link">
-            ← Back to Observations
-          </Link>
+    <main className="page-container">
+      <Link
+        to="/observations"
+        className="back-link"
+      >
+        ← Back to observation log
+      </Link>
+
+      <article className="details-panel">
+        <header className="details-header">
+          <p className="eyebrow">
+            {observation.object_type}
+          </p>
 
           <h1>{observation.object_name}</h1>
 
-          <p>{observation.object_type}</p>
-        </div>
+          <p className="details-date">
+            {formattedDate} · {formattedTime}
+          </p>
+        </header>
 
-        <div className="button-group">
-          <button
-            className="btn btn-primary"
-            onClick={() => setIsEditing(true)}
+        <section className="details-grid">
+          <div className="detail-item">
+            <p className="detail-label">Location</p>
+
+            <p className="detail-value">
+              {observation.location || "Not recorded"}
+            </p>
+          </div>
+
+          <div className="detail-item">
+            <p className="detail-label">Equipment</p>
+
+            <p className="detail-value">
+              {observation.equipment || "Not recorded"}
+            </p>
+          </div>
+
+          <div className="detail-item">
+            <p className="detail-label">Sky conditions</p>
+
+            <p className="detail-value">
+              {observation.sky_conditions ||
+                "Not recorded"}
+            </p>
+          </div>
+
+          <div className="detail-item">
+            <p className="detail-label">Rating</p>
+
+            <p className="detail-value">
+              {observation.rating ? (
+                <span className="rating">
+                  {"★".repeat(observation.rating)}
+                  <span className="rating-empty">
+                    {"★".repeat(5 - observation.rating)}
+                  </span>
+                </span>
+              ) : (
+                "Not rated"
+              )}
+            </p>
+          </div>
+        </section>
+
+        <section className="notes-section">
+          <p className="eyebrow">Field notes</p>
+
+          <h2>What I saw</h2>
+
+          <p>
+            {observation.notes ||
+              "No notes were recorded for this observation."}
+          </p>
+        </section>
+
+        <div className="card-actions">
+          <Link
+            to={`/observations/${observation.id}/edit`}
+            className="button primary-button"
           >
-            Edit
-          </button>
+            Edit observation
+          </Link>
 
           <button
-            className="btn btn-danger"
+            type="button"
+            className="button danger-button"
             onClick={handleDelete}
           >
             Delete
           </button>
         </div>
-      </div>
-
-      <section className="details-grid">
-        <div className="detail-card">
-          <span className="detail-label">Date & Time</span>
-          <strong>
-            {new Date(observation.date_observed).toLocaleString()}
-          </strong>
-        </div>
-
-        <div className="detail-card">
-          <span className="detail-label">Location</span>
-          <strong>
-            {observation.location || "Not specified"}
-          </strong>
-        </div>
-
-        <div className="detail-card">
-          <span className="detail-label">Equipment</span>
-          <strong>
-            {observation.equipment || "Not specified"}
-          </strong>
-        </div>
-
-        <div className="detail-card">
-          <span className="detail-label">Sky Conditions</span>
-          <strong>
-            {observation.sky_conditions || "Not specified"}
-          </strong>
-        </div>
-
-        <div className="detail-card">
-          <span className="detail-label">Rating</span>
-          <strong>
-            {observation.rating
-              ? `${observation.rating} / 5`
-              : "Not rated"}
-          </strong>
-        </div>
-      </section>
-
-      <section className="surface notes-section">
-        <h2>Notes</h2>
-
-        <p>
-          {observation.notes || "No notes were added."}
-        </p>
-      </section>
+      </article>
     </main>
   );
 }

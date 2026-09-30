@@ -5,6 +5,7 @@ import Navbar from "./components/Navbar";
 import Dashboard from "./pages/Dashboard";
 import Observations from "./pages/Observations";
 import ObservationDetails from "./pages/ObservationDetails";
+import EditObservation from "./pages/EditObservation";
 
 function App() {
   return (
@@ -22,6 +23,11 @@ function App() {
         <Route
           path="/observations/:id"
           element={<ObservationDetails />}
+        />
+        
+        <Route
+          path="/observations/:id/edit"
+          element={<EditObservation />}
         />
       </Routes>
     </BrowserRouter>

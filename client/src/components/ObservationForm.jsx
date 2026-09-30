@@ -1,16 +1,5 @@
 import { useEffect, useState } from "react";
 
-const emptyForm = {
-  object_name: "",
-  object_type: "",
-  date_observed: "",
-  location: "",
-  equipment: "",
-  sky_conditions: "",
-  notes: "",
-  rating: "",
-};
-
 function formatDateTimeLocal(value) {
   if (!value) return "";
 
@@ -20,13 +9,10 @@ function formatDateTimeLocal(value) {
     return "";
   }
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const offset = date.getTimezoneOffset() * 60000;
+  const localDate = new Date(date.getTime() - offset);
 
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  return localDate.toISOString().slice(0, 16);
 }
 
 function ObservationForm({
@@ -34,34 +20,47 @@ function ObservationForm({
   onSubmit,
   submitLabel = "Save Observation",
 }) {
-  const [form, setForm] = useState(emptyForm);
-  const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [form, setForm] = useState({
+    object_name: "",
+    object_type: "",
+    date_observed: "",
+    location: "",
+    equipment: "",
+    sky_conditions: "",
+    notes: "",
+    rating: "",
+  });
 
-  const isEditing = Boolean(initialData);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (initialData) {
       setForm({
         object_name: initialData.object_name || "",
         object_type: initialData.object_type || "",
-        date_observed: formatDateTimeLocal(initialData.date_observed),
+        date_observed: formatDateTimeLocal(
+          initialData.date_observed
+        ),
         location: initialData.location || "",
         equipment: initialData.equipment || "",
-        sky_conditions: initialData.sky_conditions || "",
+        sky_conditions:
+          initialData.sky_conditions || "",
         notes: initialData.notes || "",
-        rating: initialData.rating || "",
+        rating:
+          initialData.rating !== null &&
+          initialData.rating !== undefined
+            ? String(initialData.rating)
+            : "",
       });
-    } else {
-      setForm(emptyForm);
     }
   }, [initialData]);
 
   function handleChange(event) {
     const { name, value } = event.target;
 
-    setForm((current) => ({
-      ...current,
+    setForm((previous) => ({
+      ...previous,
       [name]: value,
     }));
   }
@@ -71,14 +70,13 @@ function ObservationForm({
 
     setError("");
 
-    // Required field validation
     if (!form.object_name.trim()) {
       setError("Object name is required.");
       return;
     }
 
     if (!form.object_type) {
-      setError("Please select an object type.");
+      setError("Object type is required.");
       return;
     }
 
@@ -87,17 +85,17 @@ function ObservationForm({
       return;
     }
 
-    // Rating validation
     if (
       form.rating &&
-      (Number(form.rating) < 1 || Number(form.rating) > 5)
+      (Number(form.rating) < 1 ||
+        Number(form.rating) > 5)
     ) {
       setError("Rating must be between 1 and 5.");
       return;
     }
 
     try {
-      setIsSubmitting(true);
+      setSaving(true);
 
       await onSubmit({
         object_name: form.object_name.trim(),
@@ -107,163 +105,201 @@ function ObservationForm({
         equipment: form.equipment.trim(),
         sky_conditions: form.sky_conditions,
         notes: form.notes.trim(),
-        rating: form.rating ? Number(form.rating) : null,
+        rating: form.rating
+          ? Number(form.rating)
+          : null,
       });
-
-      if (!isEditing) {
-        setForm(emptyForm);
-      }
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      setError(
+        err.message || "Failed to save observation."
+      );
     } finally {
-      setIsSubmitting(false);
+      setSaving(false);
     }
   }
 
   return (
-    <form className="observation-form" onSubmit={handleSubmit}>
-      <div className="form-grid">
-        <div className="form-group">
-          <label htmlFor="object_name">
-            Object Name <span>*</span>
-          </label>
-
-          <input
-            id="object_name"
-            name="object_name"
-            type="text"
-            value={form.object_name}
-            onChange={handleChange}
-            placeholder="e.g. Jupiter"
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="object_type">
-            Object Type <span>*</span>
-          </label>
-
-          <select
-            id="object_type"
-            name="object_type"
-            value={form.object_type}
-            onChange={handleChange}
-          >
-            <option value="">Select type</option>
-            <option value="Planet">Planet</option>
-            <option value="Moon">Moon</option>
-            <option value="Star">Star</option>
-            <option value="Galaxy">Galaxy</option>
-            <option value="Nebula">Nebula</option>
-            <option value="Cluster">Cluster</option>
-            <option value="Constellation">Constellation</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="date_observed">
-            Date & Time <span>*</span>
-          </label>
-
-          <input
-            id="date_observed"
-            name="date_observed"
-            type="datetime-local"
-            value={form.date_observed}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="location">Location</label>
-
-          <input
-            id="location"
-            name="location"
-            type="text"
-            value={form.location}
-            onChange={handleChange}
-            placeholder="e.g. Backyard, Angeles City"
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="equipment">Equipment</label>
-
-          <input
-            id="equipment"
-            name="equipment"
-            type="text"
-            value={form.equipment}
-            onChange={handleChange}
-            placeholder="e.g. Telescope, Binoculars"
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="sky_conditions">Sky Conditions</label>
-
-          <select
-            id="sky_conditions"
-            name="sky_conditions"
-            value={form.sky_conditions}
-            onChange={handleChange}
-          >
-            <option value="">Select conditions</option>
-            <option value="Clear">Clear</option>
-            <option value="Partly Cloudy">Partly Cloudy</option>
-            <option value="Cloudy">Cloudy</option>
-            <option value="Hazy">Hazy</option>
-            <option value="Light Pollution">Light Pollution</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="notes">Notes</label>
-
-        <textarea
-          id="notes"
-          name="notes"
-          rows="5"
-          value={form.notes}
-          onChange={handleChange}
-          placeholder="Write about what you observed..."
-        />
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="rating">Rating</label>
-
-        <select
-          id="rating"
-          name="rating"
-          value={form.rating}
-          onChange={handleChange}
-        >
-          <option value="">No rating</option>
-          <option value="1">1 / 5</option>
-          <option value="2">2 / 5</option>
-          <option value="3">3 / 5</option>
-          <option value="4">4 / 5</option>
-          <option value="5">5 / 5</option>
-        </select>
-      </div>
-
+    <form
+      className="observation-form"
+      onSubmit={handleSubmit}
+    >
       {error && (
-        <div className="form-error" role="alert">
+        <div className="error-message">
           {error}
         </div>
       )}
 
+      <label>
+        Object Name *
+        <input
+          type="text"
+          name="object_name"
+          value={form.object_name}
+          onChange={handleChange}
+          placeholder="e.g. Jupiter"
+          required
+        />
+      </label>
+
+      <label>
+        Object Type *
+        <select
+          name="object_type"
+          value={form.object_type}
+          onChange={handleChange}
+          required
+        >
+          <option value="">
+            Select object type
+          </option>
+
+          <option value="Planet">
+            Planet
+          </option>
+
+          <option value="Moon">
+            Moon
+          </option>
+
+          <option value="Star">
+            Star
+          </option>
+
+          <option value="Galaxy">
+            Galaxy
+          </option>
+
+          <option value="Nebula">
+            Nebula
+          </option>
+
+          <option value="Star Cluster">
+            Star Cluster
+          </option>
+
+          <option value="Other">
+            Other
+          </option>
+        </select>
+      </label>
+
+      <label>
+        Date and Time Observed *
+        <input
+          type="datetime-local"
+          name="date_observed"
+          value={form.date_observed}
+          onChange={handleChange}
+          required
+        />
+      </label>
+
+      <label>
+        Location
+        <input
+          type="text"
+          name="location"
+          value={form.location}
+          onChange={handleChange}
+          placeholder="Where did you observe it?"
+        />
+      </label>
+
+      <label>
+        Equipment
+        <input
+          type="text"
+          name="equipment"
+          value={form.equipment}
+          onChange={handleChange}
+          placeholder="e.g. 8-inch Dobsonian"
+        />
+      </label>
+
+      <label>
+        Sky Conditions
+        <select
+          name="sky_conditions"
+          value={form.sky_conditions}
+          onChange={handleChange}
+        >
+          <option value="">
+            Select conditions
+          </option>
+
+          <option value="Clear">
+            Clear
+          </option>
+
+          <option value="Partly Cloudy">
+            Partly Cloudy
+          </option>
+
+          <option value="Cloudy">
+            Cloudy
+          </option>
+
+          <option value="Hazy">
+            Hazy
+          </option>
+        </select>
+      </label>
+
+      <label>
+        Rating
+        <select
+          name="rating"
+          value={form.rating}
+          onChange={handleChange}
+        >
+          <option value="">
+            No rating
+          </option>
+
+          <option value="1">
+            1 — Poor
+          </option>
+
+          <option value="2">
+            2 — Fair
+          </option>
+
+          <option value="3">
+            3 — Good
+          </option>
+
+          <option value="4">
+            4 — Very Good
+          </option>
+
+          <option value="5">
+            5 — Excellent
+          </option>
+        </select>
+      </label>
+
+      <label>
+        Notes
+        <textarea
+          name="notes"
+          value={form.notes}
+          onChange={handleChange}
+          placeholder="What did you see?"
+          rows="6"
+        />
+      </label>
+
       <div className="form-actions">
         <button
           type="submit"
-          className="btn btn-primary"
-          disabled={isSubmitting}
+          className="button primary-button save-button"
+          disabled={saving}
         >
-          {isSubmitting ? "Saving..." : submitLabel}
+          <span className="button-icon">
+            {saving ? "…" : "✦"}
+          </span>
+
+          {saving ? "Saving..." : submitLabel}
         </button>
       </div>
     </form>
