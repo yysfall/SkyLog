@@ -3,8 +3,8 @@
 > A full-stack web application for amateur astronomers and astronomy enthusiasts to record, organize, and manage their personal skywatching observations.
 
 **Live site:** [Add your deployed GitHub Pages URL]  
-**API:** [Add your deployed Render API URL]/health  
-**Demo video:** [Add your public Google Drive demo video link]
+**API:** https://skylog-7til.onrender.com/health 
+**Demo video:** https://drive.google.com/drive/folders/1MmTq2xBoGF0Hwwn37qtCMGmXSC2dJsCb
 
 ![SkyLog Dashboard](docs/assets/screenshot.png)
 
